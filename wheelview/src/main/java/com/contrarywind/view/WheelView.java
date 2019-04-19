@@ -67,7 +67,6 @@ public class WheelView extends View {
 
     private String label;//附加单位
     private int textSize;//选项的文字大小
-    private int maxTextWidth;
     private int maxTextHeight;
     private int textXOffset;
     private float itemHeight;//每行高度
@@ -245,15 +244,6 @@ public class WheelView extends View {
      */
     private void measureTextWidthHeight() {
         Rect rect = new Rect();
-        for (int i = 0; i < adapter.getItemsCount(); i++) {
-            String s1 = getContentText(adapter.getItem(i));
-            paintCenterText.getTextBounds(s1, 0, s1.length(), rect);
-
-            int textWidth = rect.width();
-            if (textWidth > maxTextWidth) {
-                maxTextWidth = textWidth;
-            }
-        }
         paintCenterText.getTextBounds("\u661F\u671F", 0, 2, rect); // 星期的字符编码（以它为标准高度）
         maxTextHeight = rect.height() + 2;
         itemHeight = lineSpacingMultiplier * maxTextHeight;
@@ -361,8 +351,7 @@ public class WheelView extends View {
         initPosition = Math.min(Math.max(0, initPosition), adapter.getItemsCount() - 1);
 
         //可见的item数组
-        @SuppressLint("DrawAllocation")
-        Object visibles[] = new Object[itemsVisible];
+        int visibles[] = new int[itemsVisible];
         //滚动的Y值高度除去每行Item的高度，得到滚动了多少个item，即change数
         change = (int) (totalScrollY / itemHeight);
         // Log.d("change", "" + change);
@@ -399,13 +388,13 @@ public class WheelView extends View {
             //判断是否循环，如果是循环数据源也使用相对循环的position获取对应的item值，如果不是循环则超出数据源范围使用""空白字符串填充，在界面上形成空白无数据的item项
             if (isLoop) {
                 index = getLoopMappingIndex(index);
-                visibles[counter] = adapter.getItem(index);
+                visibles[counter] = index;
             } else if (index < 0) {
-                visibles[counter] = "";
+                visibles[counter] = -1;
             } else if (index > adapter.getItemsCount() - 1) {
-                visibles[counter] = "";
+                visibles[counter] = -1;
             } else {
-                visibles[counter] = adapter.getItem(index);
+                visibles[counter] = index;
             }
 
             counter++;
@@ -416,16 +405,7 @@ public class WheelView extends View {
         if (dividerType == DividerType.WRAP) {//横线长度仅包裹内容
             float startX;
             float endX;
-
-            if (TextUtils.isEmpty(label)) {//隐藏Label的情况
-                startX = (measuredWidth - maxTextWidth) / 2 - 12;
-            } else {
-                startX = (measuredWidth - maxTextWidth) / 4 - 12;
-            }
-
-            if (startX <= 0) {//如果超过了WheelView的边缘
-                startX = 10;
-            }
+            startX = 10;
             endX = measuredWidth - startX;
             canvas.drawLine(startX, firstLineY, endX, firstLineY, paintIndicator);
             canvas.drawLine(startX, secondLineY, endX, secondLineY, paintIndicator);
@@ -436,9 +416,7 @@ public class WheelView extends View {
 
         //只显示选中项Label文字的模式，并且Label文字不为空，则进行绘制
         if (!TextUtils.isEmpty(label) && isCenterLabel) {
-            //绘制文字，靠右并留出空隙
-            int drawRightContentStart = measuredWidth - getTextWidth(paintCenterText, label);
-            canvas.drawText(label, drawRightContentStart - CENTER_CONTENT_OFFSET, centerY, paintCenterText);
+            canvas.drawText(label, drawCenterContentStart, centerY, paintCenterText);
         }
 
         counter = 0;
@@ -459,13 +437,16 @@ public class WheelView extends View {
                 float offsetCoefficient = (float) Math.pow(Math.abs(angle) / 90f, 2.2);
                 //获取内容文字
                 String contentText;
+                String contentCenterText;
 
-                //如果是label每项都显示的模式，并且item内容不为空、label 也不为空
-                if (!isCenterLabel && !TextUtils.isEmpty(label) && !TextUtils.isEmpty(getContentText(visibles[counter]))) {
-                    contentText = getContentText(visibles[counter]) + label;
-                } else {
-                    contentText = getContentText(visibles[counter]);
+                Object item = "";
+                Object itemCenter = "";
+                if (visibles[counter] != -1) {
+                    item = adapter.getItem(visibles[counter]);
+                    itemCenter = adapter.getItemCenter(visibles[counter]);
                 }
+                contentText = getContentText(item);
+                contentCenterText = getContentText(itemCenter);
 
                 reMeasureTextSize(contentText);
                 //计算开始绘制的位置
@@ -485,14 +466,14 @@ public class WheelView extends View {
                     canvas.save();
                     canvas.clipRect(0, firstLineY - translateY, measuredWidth, (int) (itemHeight));
                     canvas.scale(1.0F, (float) Math.sin(radian) * 1.0F);
-                    canvas.drawText(contentText, drawCenterContentStart, maxTextHeight - CENTER_CONTENT_OFFSET, paintCenterText);
+                    canvas.drawText(contentCenterText, drawCenterContentStart, maxTextHeight - CENTER_CONTENT_OFFSET, paintCenterText);
                     canvas.restore();
                 } else if (translateY <= secondLineY && maxTextHeight + translateY >= secondLineY) {
                     // 条目经过第二条线
                     canvas.save();
                     canvas.clipRect(0, 0, measuredWidth, secondLineY - translateY);
                     canvas.scale(1.0F, (float) Math.sin(radian) * 1.0F);
-                    canvas.drawText(contentText, drawCenterContentStart, maxTextHeight - CENTER_CONTENT_OFFSET, paintCenterText);
+                    canvas.drawText(contentCenterText, drawCenterContentStart, maxTextHeight - CENTER_CONTENT_OFFSET, paintCenterText);
                     canvas.restore();
                     canvas.save();
                     canvas.clipRect(0, secondLineY - translateY, measuredWidth, (int) (itemHeight));
@@ -504,7 +485,7 @@ public class WheelView extends View {
                     // canvas.clipRect(0, 0, measuredWidth, maxTextHeight);
                     //让文字居中
                     float Y = maxTextHeight - CENTER_CONTENT_OFFSET;//因为圆弧角换算的向下取值，导致角度稍微有点偏差，加上画笔的基线会偏上，因此需要偏移量修正一下
-                    canvas.drawText(contentText, drawCenterContentStart, Y, paintCenterText);
+                    canvas.drawText(contentCenterText, drawCenterContentStart, Y, paintCenterText);
 
                     //设置选中项
                     selectedItem = preCurrentIndex - (itemsVisible / 2 - counter);

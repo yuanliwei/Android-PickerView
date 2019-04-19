@@ -1,19 +1,19 @@
 package com.contrarywind.adapter;
 
 
-public interface WheelAdapter<T> {
+public abstract class WheelAdapter<T> {
 	/**
 	 * Gets items count
 	 * @return the count of wheel items
 	 */
-	int getItemsCount();
+	public abstract int getItemsCount();
 	
 	/**
 	 * Gets a wheel item by index.
 	 * @param index the item index
 	 * @return the wheel item text or null
 	 */
-	T getItem(int index);
+	public abstract T getItem(int index);
 	
 	/**
 	 * Gets maximum item length. It is used to determine the wheel width.
@@ -21,5 +21,9 @@ public interface WheelAdapter<T> {
 	 * @param o  the item object
 	 * @return the maximum item length or -1
      */
-	int indexOf(T o);
+	public abstract int indexOf(T o);
+
+	public T getItemCenter(int index){
+		return getItem(index);
+	}
 }

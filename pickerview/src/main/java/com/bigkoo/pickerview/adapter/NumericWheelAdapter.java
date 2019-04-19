@@ -6,7 +6,7 @@ import com.contrarywind.adapter.WheelAdapter;
 /**
  * Numeric Wheel adapter.
  */
-public class NumericWheelAdapter implements WheelAdapter {
+public class NumericWheelAdapter extends WheelAdapter {
 	
 	private int minValue;
 	private int maxValue;
