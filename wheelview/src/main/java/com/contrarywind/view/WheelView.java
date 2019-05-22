@@ -1,6 +1,5 @@
 package com.contrarywind.view;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -508,6 +507,16 @@ public class WheelView extends View {
             }
             counter++;
         }
+    }
+
+    public Rect getCenterTextBounds(String text) {
+        Rect rect = new Rect();
+        paintCenterText.getTextBounds(text, 0, text.length(), rect);
+        return rect;
+    }
+
+    public Paint getCenterPaint(){
+        return paintCenterText;
     }
 
     /**
